@@ -1,0 +1,225 @@
+# MLKitOCRDemo — Delphi FMX + Google ML Kit on Android (native JNI, no third-party wrappers)
+
+*[Leer en español](README.es.md)*
+
+A Delphi FireMonkey (RAD Studio 12 Athens / BDS 23.0) Android app that
+integrates several Google ML Kit / Android platform capabilities directly
+through a hand-written JNI bridge (`Androidapi.JNIBridge`) — **no Kastri, no
+third-party wrapper library**. Target is **Android64 (arm64-v8a) only**; the
+project intentionally does not support 32-bit Android (several Play Services
+/ ML Kit modules fail silently there).
+
+## What the app does
+
+Four tabs in one `TTabControl`:
+
+| Tab | What it does |
+|---|---|
+| **Foto** | Take a photo (`TTakePhotoFromCameraAction`) and run it through **ML Kit Text Recognition v2** (on-device OCR). |
+| **Texto** | Type or paste text, detect its language with **ML Kit Language Identification**, and translate it with **ML Kit Translate** (per-language models are downloaded on demand via `RemoteModelManager`). |
+| **Voz** | Speech-to-text via the native Android `RECOGNIZE_SPEECH` intent (`android.speech.action.RECOGNIZE_SPEECH`) — no ML Kit dependency, just the platform speech recognizer. The recognized text is editable and feeds into the translation controls. |
+| **Vivo** | Live camera preview (`TCameraComponent`) that chains **OCR → language detection → translation automatically** on each sampled frame, with an optional "translate automatically" toggle. |
+
+A shared **"Escuchar traducción"** button speaks the translated text back with
+Android's native `TextToSpeech` API.
+
+## Why it's built this way
+
+- **OCR uses the "unbundled" Play-Services variant**
+  (`com.google.android.gms:play-services-mlkit-text-recognition`), not
+  `com.google.mlkit:text-recognition`. RAD Studio's Android toolchain does
+  not run Gradle or resolve Maven dependencies — it only packages
+  `.jar`/`.aar` files added by hand to the project. The unbundled variant has
+  a far smaller transitive dependency tree (the on-device model is fetched
+  by Play Services at runtime instead of being bundled), which makes it
+  realistic to add "by hand". Trade-off: the device needs Google Play
+  Services.
+- **Translate has no Play-Services-hosted variant** — `com.google.mlkit:translate`
+  is the only artifact, and it bundles the TFLite inference engine directly
+  (only the per-language model *data* is downloaded on demand). This pulls
+  in TFLite AARs that OCR alone doesn't need.
+- **Language Identification** ships its own small on-device model as an AAR
+  asset — nothing to download at runtime, works offline from the first call.
+- **Speech-to-text and text-to-speech use plain Android SDK classes**
+  (`android.speech.action.RECOGNIZE_SPEECH` intent, `android.speech.tts.TextToSpeech`),
+  declared directly against the stable Android SDK — no ML Kit AAR needed for
+  either.
+- **The Java wrapper is plain Java, not Kotlin.** RAD Studio compiles loose
+  `.java` files added to an Android project with its own `javac` as part of
+  the build; it has no `kotlinc` integration. Writing the wrapper in Kotlin
+  would have required building it externally and adding the resulting
+  `.jar`/`.aar` — more steps for the same result.
+- **Live camera uses `TCameraComponent`**, started from its own thread
+  (`TThread.CreateAnonymousThread`) rather than the main thread — a real bug
+  in `FMX.Media.Android.pas` means `Camera.open()` can hang the calling
+  thread if it throws. `FocusMode`/`Quality` are set as optional, each in
+  its own `try/except`, never sharing a block with `Active := True`.
+- **Java → Delphi callbacks** follow the standard JNIBridge pattern:
+  `TJavaLocal` descendants (`TOcrCallbackImpl`, `TTranslateCallbackImpl`,
+  `TLanguageIdCallbackImpl`) implement the Java callback interfaces and are
+  kept alive as fields on the form (not local variables), since ML Kit
+  invokes them asynchronously after the triggering method has already
+  returned. UI updates from those callbacks go through `TThread.Queue`.
+
+## Project layout
+
+```
+mlkit/
+├── MLKitOCRDemo/                       Delphi project (open with RAD Studio 12 Athens)
+│   ├── MLKitOCRDemo.dproj
+│   ├── MLKitOCRDemo.dpr
+│   ├── MainForm.pas / MainForm.fmx     UI + app logic (all 4 tabs)
+│   ├── Android.JNI.MLKitOCR.pas        JNI declarations — OCR wrapper
+│   ├── Android.JNI.MLKitTranslate.pas  JNI declarations — Translate wrapper
+│   ├── Android.JNI.MLKitLanguageId.pas JNI declarations — Language ID wrapper
+│   ├── Android.JNI.TTS.pas             JNI declarations — native Android TextToSpeech
+│   └── AndroidManifest.template.xml    Custom manifest (ML Kit meta-data)
+├── java-wrapper/
+│   └── com/example/mlkitocr/           Thin Java wrappers (OCR, Translate, Language ID + callbacks)
+├── gradle-deps/                        Auxiliary Gradle project — resolves Maven deps, NEVER run from Delphi
+│   └── build.gradle                    3 tasks: collectMlKitLibs / collectTranslateLibs / collectLanguageIdLibs
+├── libs-android*/                      Generated by gradle-deps — not committed, see below
+├── delphikit.md                        Step-by-step guide for adding/touching ML Kit libraries
+├── javabridge.md                       Why RAD Studio doesn't compile project .java, and the JNI pattern used
+└── sesion.md                           Chronological log of real errors found and their root cause
+```
+
+`libs-android/`, `libs-android-translate/`, `libs-android-languageid/` and
+`lib/` are **not committed** (see `.gitignore`) — they're binary
+`.jar`/`.aar` files regenerated by `gradle-deps` (see below). Same for the
+`Android/`/`Android64/` build-output folders under `MLKitOCRDemo/` and the
+RAD Studio `__history/`/`__recovery/` backup folders.
+
+## Setting up ML Kit dependencies (step by step)
+
+RAD Studio 12 Athens does not run Gradle or resolve Maven — it only packages
+`.jar`/`.aar` files you add to the project yourself. So:
+
+1. **Resolve the real transitive dependencies with actual Gradle** (once, or
+   whenever you bump a version):
+   ```
+   cd gradle-deps
+   gradle collectMlKitLibs
+   gradle collectTranslateLibs
+   gradle collectLanguageIdLibs
+   ```
+   Requires a JDK and Gradle (neither ships with RAD Studio). This flattens
+   every `.jar`/`.aar` into `../libs-android/`, `../libs-android-translate/`
+   and `../libs-android-languageid/`. Don't hand-copy version numbers from
+   old docs — re-run the script, since Play Services versions change often.
+2. **Add every `.jar`/`.aar` from those folders to the Delphi project.** With
+   the project open in RAD Studio: Project Manager → Target Platforms →
+   **Android64** node → *Add To Project…* → select all generated files. RAD
+   Studio extracts classes, resources and manifest fragments from each
+   `.aar` automatically and merges them into the final manifest.
+3. **Add the Java wrapper to the project.** Copy `java-wrapper/com` into
+   `MLKitOCRDemo/` (so it becomes `MLKitOCRDemo/com/example/mlkitocr/*.java`)
+   and *Add To Project…* each `.java` file — RAD Studio compiles them with
+   its own `javac` as part of the Android build.
+4. **`AndroidManifest.template.xml`** already contains the
+   `com.google.mlkit.vision.DEPENDENCIES` meta-data entry (so Play Services
+   starts downloading the OCR model right after install). If your project
+   already has a different template, don't overwrite it blindly — merge just
+   that block.
+5. **⚠️ Never add** `emoji2-*`, `emoji2-views-helper-*` or
+   `lifecycle-process-*` — they cause `NoClassDefFoundError:
+   androidx.startup.R$string` at startup.
+
+See `delphikit.md` for the full, detailed walkthrough (duplicate filtering,
+extracting `.so`/`assets/` from an AAR, final checklist).
+
+## Configuring the project in RAD Studio
+
+1. Open `MLKitOCRDemo/MLKitOCRDemo.dproj` with RAD Studio 12 Athens.
+2. **Target platform: Android64 only.** The project is built and verified
+   exclusively against **Android 64-bit (arm64-v8a)** — do not target 32-bit
+   Android, several Play Services/ML Kit modules fail silently there.
+3. **minSdkVersion 23 / targetSdkVersion 35** — verified against ML Kit's
+   official docs and set in the project's version info.
+4. **Permissions**: `CAMERA` (photo + live tab) and `INTERNET` (model
+   downloads for Translate/OCR) are required. The `.dproj` also enables
+   `ACCESS_COARSE_LOCATION`/`ACCESS_FINE_LOCATION`, which the current 4-tab
+   feature set does not actually use — left over from RAD Studio's default
+   Android template; review *Project Options > Application > Uses
+   Permissions* and trim it if you don't need it.
+5. Package name is set in *Project Options > Application > Version Info* —
+   change it there for your own build.
+6. Follow the section above to add the ML Kit AAR/JAR files and the Java
+   wrapper.
+
+## Signing keys
+
+This repo does **not** include any keystore. `MLKitOCRDemo.dproj` still
+references local debug-keystore filenames (`PF_KeyStoreDebug`) from the
+machine it was developed on — those files never left that machine and are
+excluded from version control. Generate your own debug/release keystore
+(`keytool -genkeypair …` or via RAD Studio's *Project Options > Application >
+Security* signing UI) and point the relevant `PF_KeyStore*` properties at it
+locally; do not commit the resulting `.keystore`/`.jks` file (already covered
+by `.gitignore`).
+
+## Build & deploy
+
+1. Connect a physical Android64 device with USB debugging, or start an
+   emulator **with Google Play Services** (an emulator image without Google
+   APIs won't work with the Play-Services OCR variant used here).
+2. Select the **Android64** platform and target device in RAD Studio.
+3. *Run > Run* (F9). RAD Studio compiles, packages the APK (with the
+   AAR/JAR and manifest already configured) and deploys it.
+4. On the device: grant camera/microphone permissions when prompted, try
+   each tab.
+
+Command-line build (Pascal compile only — **does not** dex/package/deploy;
+use F9 in the IDE for a real end-to-end build):
+```
+"C:\Program Files (x86)\Embarcadero\Studio\23.0\bin\rsvars.bat"
+msbuild MLKitOCRDemo.dproj /p:config=Debug /p:platform=Android64 /t:Build
+```
+
+## Known limitations
+
+- **Requires Google Play Services** on the device/emulator (Play-Services
+  OCR variant + ML Kit Translate/Language ID all depend on it being
+  present/current).
+- **First run needs internet** for Play Services / ML Kit to download the
+  OCR and translation models (the manifest meta-data pre-warms OCR at
+  install time, but per-language Translate models still download on first
+  use of that language pair).
+- This is a demo, not a production app: no EXIF-based image-rotation
+  handling, no non-Latin OCR scripts by default (would need
+  `text-recognition-chinese`/`-japanese`/`-korean`/`-devanagari` add-ons),
+  no saving photos to the gallery.
+
+## Further reading
+
+- `delphikit.md` — prescriptive, step-by-step guide for adding/touching ML
+  Kit libraries (auxiliary Gradle, duplicate filtering, AAR/JavaReference,
+  extracting `.so`/`assets/` from an AAR, final checklist).
+- `javabridge.md` — why RAD Studio doesn't compile the project's `.java`
+  files, and the full JNI pattern used on the Delphi side.
+- `sesion.md` — chronological log of every real error hit during
+  development and its root cause.
+- `prompt.md` — condensed "hard rules" + step-by-step flow for starting a
+  fresh session on this project quickly.
+
+## License
+
+Copyright (C) 2026 Antonio Alcázar Ruiz (MiTeruel) — mrgarciagarcia@gmail.com
+
+This program is free software: you can redistribute it and/or modify it
+under the terms of the **GNU General Public License v3.0** (or, at your
+option, any later version), as published by the Free Software Foundation.
+Any app or derivative work built on this code and distributed/published to
+others must also be licensed under GPL-3.0 and make its source available.
+See [LICENSE](LICENSE) for the full text.
+
+## References
+
+- [ML Kit Text Recognition v2 — Android](https://developers.google.com/ml-kit/vision/text-recognition/v2/android)
+- [ML Kit Translation — Android](https://developers.google.com/ml-kit/language/translation/android)
+- [ML Kit Language Identification — Android](https://developers.google.com/ml-kit/language/identification/android)
+- RAD Studio 12 Athens documentation (docwiki.embarcadero.com) on the
+  Android custom manifest template
+- RAD Studio 12 Athens installation sources used to verify exact API
+  signatures: `FMX.Helpers.Android.pas`, `FMX.Media.Android.pas`,
+  `System.Permissions.pas`, `Androidapi.JNIBridge.pas`

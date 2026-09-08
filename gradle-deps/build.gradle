@@ -1,0 +1,125 @@
+// Standalone helper project - this is NOT part of the Delphi build and RAD
+// Studio never touches it.
+//
+// Why this exists: RAD Studio's Android toolchain (aapt2 / its own dexer /
+// its own packager - see bin\Android under the RAD Studio install) does not
+// run Gradle and does not resolve Maven dependencies. It only knows how to
+// package individual .jar/.aar files that you add to the project's Libraries
+// yourself, via Project > Add To Project. So to use ML Kit (which pulls in
+// several Play Services support AARs transitively) we need a *real* Gradle
+// dependency resolver to fetch the full closure once, flatten it into plain
+// files, and hand those files to RAD Studio.
+//
+// Usage (requires a JDK and Gradle on PATH - or use the Gradle wrapper of
+// any existing Android Studio / Gradle install you have):
+//   cd gradle-deps
+//   gradle collectMlKitLibs
+//
+// Result: every .jar/.aar needed ends up flattened into ..\libs-android\.
+// Add all of them to the Delphi project (see README.md, step "Add the ML
+// Kit dependency"). Re-run this whenever you bump the version below - do
+// not hand-copy version numbers from old documentation, this script always
+// resolves whatever is current on the day you run it.
+
+apply plugin: 'java'
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+configurations {
+    mlkitLibs
+    translateLibs
+    languageIdLibs
+}
+
+dependencies {
+    // Unbundled (Play-Services-hosted) Text Recognition v2 model: the model
+    // itself is downloaded by Google Play Services at runtime instead of
+    // being bundled into the APK. Chosen deliberately over
+    // com.google.mlkit:text-recognition because its transitive dependency
+    // tree is much smaller (no on-device TFLite model AARs to gather by
+    // hand). See README.md "Known limitations" for the tradeoff (it
+    // requires Google Play Services on the device/emulator).
+    mlkitLibs 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.1'
+
+    // ML Kit Translate: unlike Text Recognition, there is no Play-Services-
+    // hosted variant for Translate - com.google.mlkit:translate is the only
+    // artifact, and it bundles the TFLite inference engine directly (it just
+    // downloads the per-language model data on demand at runtime via
+    // RemoteModelManager, not the engine itself). So this pulls in TFLite
+    // AARs that play-services-mlkit-text-recognition didn't need.
+    translateLibs 'com.google.mlkit:translate:17.0.3'
+    // Force a much newer okhttp than the ancient 3.0.0 floor translate's own
+    // POM declares (its transitive minimum) - 3.0.0's bytecode trips a D8
+    // per-jar desugaring warning (missing okio.* supertypes on that jar's own
+    // classpath) that empties out the pre-dexed jar. 3.12.x is the last of
+    // the pre-Kotlin 3.x line, still pure Java, and what mlkit:translate is
+    // actually tested against in real apps.
+    translateLibs 'com.squareup.okhttp3:okhttp:3.12.13'
+
+    // ML Kit Language Identification: also bundled (no Play-Services-hosted
+    // variant), ships its own small on-device model as an asset inside the
+    // AAR itself - unlike Translate, there is nothing to download at
+    // runtime, identification works fully offline from the first call.
+    languageIdLibs 'com.google.mlkit:language-id:17.0.6'
+}
+
+def outDir = file("${rootDir}/../libs-android")
+def translateOutDir = file("${rootDir}/../libs-android-translate")
+def languageIdOutDir = file("${rootDir}/../libs-android-languageid")
+
+tasks.register('collectMlKitLibs', Copy) {
+    doFirst {
+        outDir.deleteDir()
+        outDir.mkdirs()
+    }
+    from configurations.mlkitLibs
+    into outDir
+    include '*.jar'
+    include '*.aar'
+    eachFile { fcd -> fcd.path = fcd.name }
+    includeEmptyDirs = false
+    doLast {
+        def files = outDir.listFiles()
+        println "Copied ${files ? files.length : 0} .jar/.aar files to ${outDir}:"
+        files?.sort { it.name }?.each { println "  - ${it.name}" }
+    }
+}
+
+tasks.register('collectTranslateLibs', Copy) {
+    doFirst {
+        translateOutDir.deleteDir()
+        translateOutDir.mkdirs()
+    }
+    from configurations.translateLibs
+    into translateOutDir
+    include '*.jar'
+    include '*.aar'
+    eachFile { fcd -> fcd.path = fcd.name }
+    includeEmptyDirs = false
+    doLast {
+        def files = translateOutDir.listFiles()
+        println "Copied ${files ? files.length : 0} .jar/.aar files to ${translateOutDir}:"
+        files?.sort { it.name }?.each { println "  - ${it.name}" }
+    }
+}
+
+tasks.register('collectLanguageIdLibs', Copy) {
+    doFirst {
+        languageIdOutDir.deleteDir()
+        languageIdOutDir.mkdirs()
+    }
+    from configurations.languageIdLibs
+    into languageIdOutDir
+    include '*.jar'
+    include '*.aar'
+    eachFile { fcd -> fcd.path = fcd.name }
+    includeEmptyDirs = false
+    doLast {
+        def files = languageIdOutDir.listFiles()
+        println "Copied ${files ? files.length : 0} .jar/.aar files to ${languageIdOutDir}:"
+        files?.sort { it.name }?.each { println "  - ${it.name}" }
+    }
+}

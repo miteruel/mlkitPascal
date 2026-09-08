@@ -1,0 +1,399 @@
+object FormMain: TFormMain
+  Left = 0
+  Top = 0
+  Caption = 'ML Kit OCR Demo'
+  ClientHeight = 800
+  ClientWidth = 480
+  FormFactor.Width = 480
+  FormFactor.Height = 800
+  FormFactor.Devices = [Desktop, iPhone, iPad]
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  DesignerMasterStyle = 0
+  object TabControlMain: TTabControl
+    Align = Top
+    Size.Width = 480.000000000000000000
+    Size.Height = 470.000000000000000000
+    Size.PlatformDefault = False
+    TabIndex = 0
+    TabOrder = 0
+    TabPosition = PlatformDefault
+    OnChange = TabControlMainChange
+    Sizes = (
+      480s
+      444s
+      480s
+      444s
+      480s
+      444s
+      480s
+      444s)
+    object TabItemFoto: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = True
+      Size.Width = 44.000000000000000000
+      Size.Height = 26.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = ''
+      TabOrder = 0
+      Text = 'Foto'
+      ExplicitSize.cx = 50.000000000000000000
+      ExplicitSize.cy = 50.000000000000000000
+      object LayoutPhotoButtons: TLayout
+        Align = Top
+        Size.Width = 480.000000000000000000
+        Size.Height = 64.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+        object ButtonTakePhoto: TButton
+          Align = Left
+          Margins.Left = 8.000000000000000000
+          Margins.Top = 8.000000000000000000
+          Margins.Bottom = 8.000000000000000000
+          Position.X = 8.000000000000000000
+          Position.Y = 8.000000000000000000
+          Size.Width = 140.000000000000000000
+          Size.Height = 48.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 0
+          Text = 'Tomar foto'
+          OnClick = ButtonTakePhotoClick
+        end
+        object ButtonRecognize: TButton
+          Align = Client
+          Margins.Left = 8.000000000000000000
+          Margins.Top = 8.000000000000000000
+          Margins.Right = 8.000000000000000000
+          Margins.Bottom = 8.000000000000000000
+          Size.Width = 316.000000000000000000
+          Size.Height = 48.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 1
+          Text = 'Reconocer texto'
+          OnClick = ButtonRecognizeClick
+        end
+      end
+      object ImagePreview: TImage
+        MultiResBitmap = <
+          item
+          end>
+        Align = Top
+        Position.Y = 64.000000000000000000
+        Size.Width = 480.000000000000000000
+        Size.Height = 180.000000000000000000
+        Size.PlatformDefault = False
+      end
+      object MemoResult: TMemo
+        Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
+        DataDetectorTypes = []
+        ReadOnly = True
+        Align = Client
+        Size.Width = 480.000000000000000000
+        Size.Height = 200.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 2
+        Viewport.Width = 476.000000000000000000
+        Viewport.Height = 196.000000000000000000
+      end
+    end
+    object TabItemTexto: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = False
+      Size.Width = 48.000000000000000000
+      Size.Height = 26.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = ''
+      TabOrder = 0
+      Text = 'Texto'
+      ExplicitSize.cx = 50.000000000000000000
+      ExplicitSize.cy = 50.000000000000000000
+      object LabelTextoHint: TLabel
+        Align = Top
+        Margins.Left = 8.000000000000000000
+        Margins.Top = 8.000000000000000000
+        Margins.Right = 8.000000000000000000
+        Position.X = 8.000000000000000000
+        Position.Y = 8.000000000000000000
+        Size.Width = 464.000000000000000000
+        Size.Height = 24.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'Escribe el texto que quieras traducir:'
+        TabOrder = 0
+      end
+      object MemoManualText: TMemo
+        Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
+        DataDetectorTypes = []
+        OnChangeTracking = MemoManualTextChangeTracking
+        Align = Client
+        Size.Width = 480.000000000000000000
+        Size.Height = 412.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 1
+        Viewport.Width = 476.000000000000000000
+        Viewport.Height = 408.000000000000000000
+      end
+    end
+    object TabItemVoz: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = False
+      Size.Width = 40.000000000000000000
+      Size.Height = 26.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = ''
+      TabOrder = 0
+      Text = 'Voz'
+      ExplicitSize.cx = 50.000000000000000000
+      ExplicitSize.cy = 50.000000000000000000
+      object ButtonStartVoice: TButton
+        Align = Top
+        Margins.Left = 8.000000000000000000
+        Margins.Top = 8.000000000000000000
+        Margins.Right = 8.000000000000000000
+        Position.X = 8.000000000000000000
+        Position.Y = 8.000000000000000000
+        Size.Width = 464.000000000000000000
+        Size.Height = 48.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+        Text = 'Hablar'
+        OnClick = ButtonStartVoiceClick
+      end
+      object LabelVozHint: TLabel
+        Align = Top
+        Margins.Left = 8.000000000000000000
+        Margins.Top = 4.000000000000000000
+        Margins.Right = 8.000000000000000000
+        Position.X = 8.000000000000000000
+        Position.Y = 60.000000000000000000
+        Size.Width = 464.000000000000000000
+        Size.Height = 24.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'El texto reconocido aparece abajo; puedes editarlo.'
+        TabOrder = 1
+      end
+      object MemoVoiceResult: TMemo
+        Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
+        DataDetectorTypes = []
+        OnChangeTracking = MemoVoiceResultChangeTracking
+        Align = Client
+        Size.Width = 480.000000000000000000
+        Size.Height = 360.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 2
+        Viewport.Width = 476.000000000000000000
+        Viewport.Height = 356.000000000000000000
+      end
+    end
+    object TabItemVivo: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = False
+      Size.Width = 44.000000000000000000
+      Size.Height = 26.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = ''
+      TabOrder = 0
+      Text = 'Vivo'
+      ExplicitSize.cx = 50.000000000000000000
+      ExplicitSize.cy = 50.000000000000000000
+      object ImageLiveCamera: TImage
+        MultiResBitmap = <
+          item
+          end>
+        Align = Top
+        Size.Width = 480.000000000000000000
+        Size.Height = 260.000000000000000000
+        Size.PlatformDefault = False
+      end
+      object CheckBoxAutoTranslate: TCheckBox
+        Align = Top
+        IsChecked = True
+        Margins.Left = 8.000000000000000000
+        Margins.Top = 4.000000000000000000
+        Margins.Right = 8.000000000000000000
+        Position.X = 8.000000000000000000
+        Position.Y = 264.000000000000000000
+        Size.Width = 464.000000000000000000
+        Size.Height = 24.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+        Text = 'Traducir autom'#225'ticamente'
+      end
+      object LabelLiveLanguage: TLabel
+        Align = Top
+        Margins.Left = 8.000000000000000000
+        Margins.Top = 4.000000000000000000
+        Margins.Right = 8.000000000000000000
+        Margins.Bottom = 4.000000000000000000
+        Position.X = 8.000000000000000000
+        Position.Y = 292.000000000000000000
+        Size.Width = 464.000000000000000000
+        Size.Height = 24.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'Apunta con la c'#225'mara a un texto...'
+        TabOrder = 1
+      end
+      object MemoLiveText: TMemo
+        Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
+        DataDetectorTypes = []
+        ReadOnly = True
+        Align = Client
+        Size.Width = 480.000000000000000000
+        Size.Height = 124.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 2
+        Viewport.Width = 476.000000000000000000
+        Viewport.Height = 120.000000000000000000
+      end
+    end
+  end
+  object LabelStatus: TLabel
+    Align = Top
+    Margins.Left = 8.000000000000000000
+    Margins.Top = 4.000000000000000000
+    Margins.Right = 8.000000000000000000
+    Margins.Bottom = 4.000000000000000000
+    Position.X = 8.000000000000000000
+    Position.Y = 674.000000000000000000
+    Size.Width = 464.000000000000000000
+    Size.Height = 32.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+  end
+  object LayoutTranslate: TLayout
+    Align = Top
+    Position.Y = 470.000000000000000000
+    Size.Width = 480.000000000000000000
+    Size.Height = 200.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 2
+    object LayoutLangRow: TLayout
+      Align = Top
+      Margins.Top = 8.000000000000000000
+      Position.Y = 8.000000000000000000
+      Size.Width = 480.000000000000000000
+      Size.Height = 40.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      object ComboLangSource: TComboBox
+        Align = Left
+        Margins.Left = 8.000000000000000000
+        Position.X = 8.000000000000000000
+        Size.Width = 150.000000000000000000
+        Size.Height = 40.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+      end
+      object ComboLangTarget: TComboBox
+        Align = Client
+        Margins.Left = 8.000000000000000000
+        Margins.Right = 8.000000000000000000
+        Size.Width = 242.000000000000000000
+        Size.Height = 40.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 1
+      end
+      object ButtonSwapLanguages: TButton
+        Align = Right
+        Margins.Right = 8.000000000000000000
+        Position.X = 416.000000000000000000
+        Size.Width = 56.000000000000000000
+        Size.Height = 40.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 2
+        Text = '<->'
+        OnClick = ButtonSwapLanguagesClick
+      end
+    end
+    object ButtonDetectLanguage: TButton
+      Align = Top
+      Margins.Left = 8.000000000000000000
+      Margins.Top = 8.000000000000000000
+      Margins.Right = 8.000000000000000000
+      Position.X = 8.000000000000000000
+      Position.Y = 56.000000000000000000
+      Size.Width = 464.000000000000000000
+      Size.Height = 40.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 1
+      Text = 'Detectar idioma'
+      OnClick = ButtonDetectLanguageClick
+    end
+    object ButtonTranslate: TButton
+      Align = Top
+      Enabled = False
+      Margins.Left = 8.000000000000000000
+      Margins.Top = 8.000000000000000000
+      Margins.Right = 8.000000000000000000
+      Position.X = 8.000000000000000000
+      Position.Y = 104.000000000000000000
+      Size.Width = 464.000000000000000000
+      Size.Height = 40.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 2
+      Text = 'Traducir'
+      OnClick = ButtonTranslateClick
+    end
+    object ButtonSpeak: TButton
+      Align = Top
+      Enabled = False
+      Margins.Left = 8.000000000000000000
+      Margins.Top = 8.000000000000000000
+      Margins.Right = 8.000000000000000000
+      Margins.Bottom = 8.000000000000000000
+      Position.X = 8.000000000000000000
+      Position.Y = 152.000000000000000000
+      Size.Width = 464.000000000000000000
+      Size.Height = 40.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 3
+      Text = 'Escuchar traducci'#243'n'
+      OnClick = ButtonSpeakClick
+    end
+  end
+  object MemoTranslated: TMemo
+    Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
+    DataDetectorTypes = []
+    ReadOnly = True
+    Align = Client
+    Size.Width = 480.000000000000000000
+    Size.Height = 90.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 3
+    Viewport.Width = 476.000000000000000000
+    Viewport.Height = 86.000000000000000000
+  end
+  object CameraComponentLive: TCameraComponent
+    OnSampleBufferReady = CameraComponentLiveSampleBufferReady
+    Left = 424
+    Top = 88
+  end
+  object TimerLiveScan: TTimer
+    Enabled = False
+    Interval = 1500
+    OnTimer = TimerLiveScanTimer
+    Left = 424
+    Top = 152
+  end
+  object TimerLiveTranslateSlow: TTimer
+    Enabled = False
+    Interval = 1500
+    OnTimer = TimerLiveTranslateSlowTimer
+    Left = 424
+    Top = 216
+  end
+  object ActionList1: TActionList
+    Left = 424
+    Top = 24
+    object TakePhotoFromCameraAction1: TTakePhotoFromCameraAction
+      OnDidFinishTaking = TakePhotoFromCameraAction1DidFinishTaking
+    end
+  end
+end
